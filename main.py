@@ -11,6 +11,7 @@ from pathlib import Path
 import feedparser
 from dotenv import load_dotenv
 
+import downloader
 import storage
 
 # Base directory for resolving paths relative to script location
@@ -141,7 +142,7 @@ def filter_and_match(entries, watchlist, category=TARGET_CATEGORY):
     return matches
 
 
-def run_once():
+def run_once(download=False):
     """
     Run a single check of the RSS feed.
     Returns the number of new entries saved.
@@ -160,6 +161,10 @@ def run_once():
     matches = filter_and_match(feed_entries, watchlist)
     logger.info(f"Matched entries: {len(matches)}")
 
+    # Get seen hashes to identify new matches
+    seen_hashes = storage.load_seen_hashes(MATCHES_FILE)
+    new_matches = [m for m in matches if m.get("infohash") not in seen_hashes]
+
     # Save matches (with deduplication)
     new_count = storage.save_matches(MATCHES_FILE, matches)
     logger.info(f"New entries saved: {new_count}")
@@ -172,10 +177,17 @@ def run_once():
             logger.debug(f"    Matched: {match['matched_title']}")
             logger.debug(f"    Magnet: {match['magnet']}")
 
+    # Send new matches to qBittorrent if download enabled
+    if download and new_matches:
+        magnets = [m["magnet"] for m in new_matches]
+        logger.info(f"Adding {len(magnets)} torrent(s) to qBittorrent")
+        success, fail = downloader.add_torrents(magnets)
+        logger.info(f"qBittorrent: {success} added, {fail} failed")
+
     return new_count
 
 
-def run_daemon(interval):
+def run_daemon(interval, download=False):
     """
     Run continuously, polling at the specified interval.
     """
@@ -183,7 +195,7 @@ def run_daemon(interval):
 
     while not shutdown_requested:
         try:
-            run_once()
+            run_once(download=download)
         except Exception as e:
             logger.error(f"Error during feed check: {e}")
 
@@ -222,9 +234,15 @@ def parse_args():
         help="Polling interval in seconds (default: 300 = 5 min)",
     )
     parser.add_argument(
-        "-v", "--verbose",
+        "-v",
+        "--verbose",
         action="store_true",
         help="Enable DEBUG logging",
+    )
+    parser.add_argument(
+        "--download",
+        action="store_true",
+        help="Auto-download matched torrents via qBittorrent",
     )
     return parser.parse_args()
 
@@ -242,9 +260,9 @@ def main():
     signal.signal(signal.SIGTERM, signal_handler)
 
     if args.daemon:
-        run_daemon(args.interval)
+        run_daemon(args.interval, download=args.download)
     else:
-        run_once()
+        run_once(download=args.download)
 
 
 if __name__ == "__main__":

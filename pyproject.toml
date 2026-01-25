@@ -7,4 +7,5 @@ requires-python = ">=3.10"
 dependencies = [
     "feedparser>=6.0.12",
     "python-dotenv>=1.2.1",
+    "qbittorrent-api>=2024.2.59",
 ]
