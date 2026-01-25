@@ -1,0 +1,10 @@
+[Unit]
+Description=Run MangaMouser every 5 minutes
+
+[Timer]
+Unit=mangamouser-oneshot.service
+OnBootSec=1min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target

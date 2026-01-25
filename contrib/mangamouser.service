@@ -1,0 +1,12 @@
+[Unit]
+Description=MangaMouser RSS Monitor
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/uv run /path/to/main.py --daemon
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

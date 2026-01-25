@@ -1,21 +1,24 @@
 import json
-import os
+from pathlib import Path
 
 
-def load_seen_links(filepath):
+def load_seen_hashes(filepath):
     """
-    Load set of already-seen links for deduplication.
+    Load set of already-seen infohashes for deduplication.
     Returns empty set if file doesn't exist.
     """
-    seen_links = set()
-    if os.path.exists(filepath):
+    filepath = Path(filepath)
+    seen_hashes = set()
+    if filepath.exists():
         with open(filepath, "r") as f:
             for line in f:
                 line = line.strip()
                 if line:
                     entry = json.loads(line)
-                    seen_links.add(entry.get("link"))
-    return seen_links
+                    infohash = entry.get("infohash")
+                    if infohash:
+                        seen_hashes.add(infohash)
+    return seen_hashes
 
 
 def append_match(filepath, match_dict):
@@ -23,7 +26,8 @@ def append_match(filepath, match_dict):
     Append single match to JSONL file.
     Creates directory if it doesn't exist.
     """
-    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    filepath = Path(filepath)
+    filepath.parent.mkdir(parents=True, exist_ok=True)
     with open(filepath, "a") as f:
         f.write(json.dumps(match_dict) + "\n")
 
@@ -31,15 +35,16 @@ def append_match(filepath, match_dict):
 def save_matches(filepath, matches):
     """
     Save list of matches to JSONL file.
-    Skips entries that have already been seen.
+    Skips entries that have already been seen (by infohash).
     """
-    seen_links = load_seen_links(filepath)
+    seen_hashes = load_seen_hashes(filepath)
     new_count = 0
 
     for match in matches:
-        if match.get("link") not in seen_links:
+        infohash = match.get("infohash")
+        if infohash and infohash not in seen_hashes:
             append_match(filepath, match)
-            seen_links.add(match.get("link"))
+            seen_hashes.add(infohash)
             new_count += 1
 
     return new_count
