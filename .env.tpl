@@ -1,2 +1,9 @@
 FEED_URL=""
 CATEGORY=""
+
+# qBittorrent WebUI
+QB_HOST=
+QB_PORT=
+QB_USER=
+QB_PASSWORD=
+QB_CATEGORY=manga
