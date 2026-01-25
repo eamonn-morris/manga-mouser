@@ -14,3 +14,8 @@ wheels/
 
 # scratch files
 example.json
+*.md
+*.txt
+
+# personal watchlist
+watchlist.json

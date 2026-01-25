@@ -1,1 +1,2 @@
 FEED_URL=""
+CATEGORY=""
