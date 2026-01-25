@@ -3,7 +3,10 @@ Description=Run MangaMouser every 5 minutes
 
 [Timer]
 Unit=mangamouser-oneshot.service
+# Run 1 minute after boot
 OnBootSec=1min
+# Run every 5 minutes after last activation
+# Change this value to adjust polling frequency
 OnUnitActiveSec=5min
 
 [Install]

@@ -4,9 +4,17 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/uv run /path/to/main.py --daemon
+# TODO: Update the path below to your installation directory
+# Add --download to enable qBittorrent integration
+# Add --interval N to change polling interval (default: 300s)
+ExecStart=/usr/bin/uv run /path/to/manga-feed/main.py --daemon --download
+WorkingDirectory=/path/to/manga-feed
 Restart=on-failure
 RestartSec=30
+
+# Optional: Run as a specific user
+# User=youruser
+# Group=youruser
 
 [Install]
 WantedBy=multi-user.target

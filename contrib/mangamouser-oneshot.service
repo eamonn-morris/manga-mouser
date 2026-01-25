@@ -4,7 +4,15 @@ After=network.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/uv run /path/to/main.py --once
+# TODO: Update the path below to your installation directory
+# Add --download to enable qBittorrent integration
+# Add -v for verbose logging
+ExecStart=/usr/bin/uv run /path/to/manga-feed/main.py --download
+WorkingDirectory=/path/to/manga-feed
+
+# Optional: Run as a specific user
+# User=youruser
+# Group=youruser
 
 [Install]
 WantedBy=multi-user.target
