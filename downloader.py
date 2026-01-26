@@ -99,3 +99,84 @@ def add_torrents(magnets):
 
     client.auth_log_out()
     return success_count, fail_count
+
+
+def get_torrent_status(infohashes):
+    """
+    Query qBittorrent for status of torrents by infohash.
+    Returns dict mapping infohash -> status dict with keys:
+        - state: qBittorrent state string
+        - progress: float 0.0-1.0
+        - name: torrent name
+        - size: total size in bytes
+        - downloaded: bytes downloaded
+        - uploaded: bytes uploaded
+        - ratio: share ratio
+    Returns None if connection fails.
+    """
+    if not infohashes:
+        return {}
+
+    client = connect()
+    if not client:
+        logger.warning("Cannot get torrent status: qBittorrent unavailable")
+        return None
+
+    # Normalize infohashes to lowercase for comparison
+    hash_set = {h.lower() for h in infohashes}
+
+    try:
+        torrents = client.torrents_info()
+        results = {}
+        for torrent in torrents:
+            torrent_hash = torrent.hash.lower()
+            if torrent_hash in hash_set:
+                results[torrent_hash] = {
+                    "state": torrent.state,
+                    "progress": torrent.progress,
+                    "name": torrent.name,
+                    "size": torrent.size,
+                    "downloaded": torrent.downloaded,
+                    "uploaded": torrent.uploaded,
+                    "ratio": torrent.ratio,
+                }
+        client.auth_log_out()
+        return results
+    except Exception as e:
+        logger.error(f"Failed to get torrent status: {e}")
+        client.auth_log_out()
+        return None
+
+
+def get_all_torrents():
+    """
+    Get all torrents from qBittorrent.
+    Returns list of torrent status dicts or None if connection fails.
+    """
+    client = connect()
+    if not client:
+        logger.warning("Cannot get torrents: qBittorrent unavailable")
+        return None
+
+    try:
+        config = get_config()
+        category = config["category"]
+        torrents = client.torrents_info(category=category)
+        results = []
+        for torrent in torrents:
+            results.append({
+                "hash": torrent.hash.lower(),
+                "state": torrent.state,
+                "progress": torrent.progress,
+                "name": torrent.name,
+                "size": torrent.size,
+                "downloaded": torrent.downloaded,
+                "uploaded": torrent.uploaded,
+                "ratio": torrent.ratio,
+            })
+        client.auth_log_out()
+        return results
+    except Exception as e:
+        logger.error(f"Failed to get torrents: {e}")
+        client.auth_log_out()
+        return None

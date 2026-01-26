@@ -114,6 +114,46 @@ uv run main.py --daemon --verbose
 | `--download` | Auto-download via qBittorrent |
 | `-v, --verbose` | Enable DEBUG logging |
 
+### Watchlist Management
+
+Manage watched titles from the command line:
+
+```bash
+# List all watchlist titles
+uv run main.py watchlist list
+
+# Add a title to the watchlist
+uv run main.py watchlist add "One Piece"
+
+# Remove a title from the watchlist
+uv run main.py watchlist remove "One Piece"
+```
+
+Titles are matched case-insensitively. Adding a title that already exists (ignoring case) will be rejected.
+
+### Download Management
+
+Track and manage torrent downloads:
+
+```bash
+# List all tracked downloads with status
+uv run main.py downloads list
+
+# List only active downloads (downloading/seeding)
+uv run main.py downloads list --active
+
+# List only completed downloads
+uv run main.py downloads list --completed
+
+# Output as JSON for scripting
+uv run main.py downloads list --json
+
+# Sync download status from qBittorrent
+uv run main.py downloads sync
+```
+
+The `sync` command updates stored match records with current download status from qBittorrent.
+
 ## Output Files
 
 All output files are stored in the `downloads/` directory:
