@@ -125,18 +125,6 @@ class MangaMouser:
 
         return new_count
 
-    def get_download_status(self, infohashes: list[str]) -> dict[str, dict] | None:
-        """
-        Get download status for the given infohashes.
-
-        Args:
-            infohashes: List of torrent infohashes.
-
-        Returns:
-            Dict mapping infohash to status dict, or None if unavailable.
-        """
-        return self.downloader.get_torrent_status_dicts(infohashes)
-
     def sync_download_status(self) -> int:
         """
         Sync download status from qBittorrent to storage.
@@ -154,4 +142,4 @@ class MangaMouser:
         if status_map is None:
             return -1
 
-        return storage.update_all_statuses(self.config.matches_file, status_map)
+        return storage.update_all_statuses(self.config.status_file, status_map)

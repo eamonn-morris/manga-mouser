@@ -37,6 +37,7 @@ class Config:
     # Paths
     base_dir: Path
     matches_file: Path
+    status_file: Path
     log_file: Path
 
     # Feed settings
@@ -79,6 +80,7 @@ def load_config(base_dir: Path | None = None) -> Config:
     # Paths
     downloads_dir = base_dir / "downloads"
     matches_file = downloads_dir / "matches.jsonl"
+    status_file = downloads_dir / "status.json"
     log_file = downloads_dir / "mouser.log"
 
     # qBittorrent config
@@ -94,6 +96,7 @@ def load_config(base_dir: Path | None = None) -> Config:
         feed_url=feed_url,
         base_dir=base_dir,
         matches_file=matches_file,
+        status_file=status_file,
         log_file=log_file,
         target_category=os.getenv("TARGET_CATEGORY", "Literature - English-translated"),
         user_agent=os.getenv("USER_AGENT", "MangaMouser/1.0"),

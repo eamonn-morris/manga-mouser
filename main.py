@@ -127,16 +127,8 @@ def cmd_downloads_list(args, config: Config) -> None:
         print("No tracked downloads")
         return
 
-    # Get current status from qBittorrent
-    service = MangaMouser(config)
-    infohashes = [m.get("infohash") for m in matches if m.get("infohash")]
-    status_map = service.get_download_status(infohashes)
-
-    if status_map:
-        for match in matches:
-            infohash = match.get("infohash", "").lower()
-            if infohash in status_map:
-                match["download_status"] = status_map[infohash]
+    # Merge stored status into matches
+    matches = storage.get_status_for_matches(config.status_file, matches)
 
     # Filter by state
     if getattr(args, "active", False):
@@ -206,9 +198,6 @@ def parse_args() -> argparse.Namespace:
     # Run subcommand
     run_parser = subparsers.add_parser("run", help="Run RSS monitor")
     run_parser.add_argument(
-        "--once", action="store_true", default=True, help="Run once and exit (default)"
-    )
-    run_parser.add_argument(
         "--daemon", action="store_true", help="Run continuously with polling"
     )
     run_parser.add_argument(
@@ -249,9 +238,6 @@ def parse_args() -> argparse.Namespace:
     downloads_sub.add_parser("sync", help="Sync download status from qBittorrent")
 
     # Legacy flags for backward compatibility
-    parser.add_argument(
-        "--once", action="store_true", default=True, help=argparse.SUPPRESS
-    )
     parser.add_argument("--daemon", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
         "--interval", type=int, default=300, metavar="N", help=argparse.SUPPRESS

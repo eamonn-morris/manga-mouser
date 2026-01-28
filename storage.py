@@ -67,67 +67,83 @@ def load_all_matches(filepath):
     return matches
 
 
-def _atomic_write_matches(filepath: Path, matches: list[dict]) -> None:
+def _atomic_write_json(filepath: Path, data: dict) -> None:
     """
-    Atomically write matches to a JSONL file using temp file + rename.
+    Atomically write JSON data to a file using temp file + rename.
     """
     filepath.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(
         mode="w",
         dir=filepath.parent,
-        prefix=".matches_",
+        prefix=".status_",
         suffix=".tmp",
         delete=False,
     ) as tmp:
-        for match in matches:
-            tmp.write(json.dumps(match) + "\n")
+        json.dump(data, tmp, indent=2)
+        tmp.write("\n")
         tmp_path = Path(tmp.name)
     tmp_path.replace(filepath)
 
 
-def update_match_status(filepath, infohash, status_dict):
+def load_status(status_file) -> dict[str, dict]:
     """
-    Update a match entry with download status.
-    Rewrites the file atomically with updated entry.
-    Returns True if entry was found and updated.
+    Load torrent status from the status file.
+    Returns dict mapping infohash (lowercase) -> status dict.
     """
-    filepath = Path(filepath)
-    matches = load_all_matches(filepath)
-
-    found = False
-    infohash_lower = infohash.lower()
-    for match in matches:
-        if match.get("infohash", "").lower() == infohash_lower:
-            match["download_status"] = status_dict
-            found = True
-            break
-
-    if found:
-        _atomic_write_matches(filepath, matches)
-
-    return found
+    status_file = Path(status_file)
+    if not status_file.exists():
+        return {}
+    with open(status_file, "r") as f:
+        return json.load(f)
 
 
-def update_all_statuses(filepath, status_map):
+def save_status(status_file, status_map: dict[str, dict]) -> None:
     """
-    Bulk update download status for multiple matches.
-    status_map: dict of infohash -> status_dict
+    Save torrent status to the status file atomically.
+    """
+    _atomic_write_json(Path(status_file), status_map)
+
+
+def update_status(status_file, infohash: str, status_dict: dict) -> None:
+    """
+    Update status for a single torrent.
+    """
+    status_map = load_status(status_file)
+    status_map[infohash.lower()] = status_dict
+    save_status(status_file, status_map)
+
+
+def update_all_statuses(status_file, new_statuses: dict[str, dict]) -> int:
+    """
+    Bulk update torrent statuses.
+    new_statuses: dict of infohash -> status_dict
     Returns count of updated entries.
     """
-    filepath = Path(filepath)
-    matches = load_all_matches(filepath)
+    status_map = load_status(status_file)
 
     # Normalize keys to lowercase
-    status_map_lower = {k.lower(): v for k, v in status_map.items()}
-
     updated = 0
-    for match in matches:
-        infohash = match.get("infohash", "").lower()
-        if infohash in status_map_lower:
-            match["download_status"] = status_map_lower[infohash]
-            updated += 1
+    for infohash, status in new_statuses.items():
+        status_map[infohash.lower()] = status
+        updated += 1
 
     if updated > 0:
-        _atomic_write_matches(filepath, matches)
+        save_status(status_file, status_map)
 
     return updated
+
+
+def get_status_for_matches(status_file, matches: list[dict]) -> list[dict]:
+    """
+    Merge status data into match dicts.
+    Returns new list with download_status populated from status file.
+    """
+    status_map = load_status(status_file)
+    result = []
+    for match in matches:
+        match_copy = match.copy()
+        infohash = match.get("infohash", "").lower()
+        if infohash in status_map:
+            match_copy["download_status"] = status_map[infohash]
+        result.append(match_copy)
+    return result
