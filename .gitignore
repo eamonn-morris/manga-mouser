@@ -19,3 +19,6 @@ example.json
 
 # personal watchlist
 watchlist.json
+
+# logs
+*.log

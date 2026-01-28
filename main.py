@@ -1,38 +1,27 @@
 import argparse
 import json
 import logging
-import os
 import signal
 import sys
 import time
 import urllib.parse
-from pathlib import Path
 
 import feedparser
-from dotenv import load_dotenv
 
 import downloader
 import storage
 import watchlist
+from config import Config, ConfigError, load_config
 
-# Base directory for resolving paths relative to script location
-BASE_DIR = Path(__file__).parent.resolve()
-MATCHES_FILE = BASE_DIR / "downloads" / "matches.jsonl"
-LOG_FILE = BASE_DIR / "downloads" / "mouser.log"
-
-# load environment variables from .env file
-load_dotenv(BASE_DIR / ".env")
-
-user_agent = "MangaMouser/1.0"
-FEED_URL = os.getenv("FEED_URL")
-TARGET_CATEGORY = "Literature - English-translated"
-
-# Global flag for graceful shutdown
+# Global state
 shutdown_requested = False
 logger = logging.getLogger("mangamouser")
 
+# Global config - initialized in main()
+_config: Config | None = None
 
-def setup_logging(verbose=False):
+
+def setup_logging(config: Config, verbose: bool = False) -> None:
     """
     Configure logging to stdout and file.
     """
@@ -40,10 +29,10 @@ def setup_logging(verbose=False):
     formatter = logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s")
 
     # Create downloads directory if needed for log file
-    LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    config.log_file.parent.mkdir(parents=True, exist_ok=True)
 
     # File handler
-    file_handler = logging.FileHandler(LOG_FILE)
+    file_handler = logging.FileHandler(config.log_file)
     file_handler.setLevel(level)
     file_handler.setFormatter(formatter)
 
@@ -87,7 +76,7 @@ def match_title(entry_title, watchlist):
     return None
 
 
-def get_feed_entries(rss_url):
+def get_feed_entries(rss_url: str, user_agent: str) -> list[dict]:
     """
     Returns list of RSS feed entries with all relevant fields.
     """
@@ -111,7 +100,7 @@ def get_feed_entries(rss_url):
     return entry_list
 
 
-def filter_and_match(entries, watchlist, category=TARGET_CATEGORY):
+def filter_and_match(entries: list[dict], watchlist_titles: list[str], category: str) -> list[dict]:
     """
     Filter entries by category and match against watchlist.
     Returns list of matched entries with matched_title and magnet fields added.
@@ -124,7 +113,7 @@ def filter_and_match(entries, watchlist, category=TARGET_CATEGORY):
             continue
 
         # Match against watchlist
-        matched_title = match_title(entry.get("title", ""), watchlist)
+        matched_title = match_title(entry.get("title", ""), watchlist_titles)
         if matched_title:
             entry["matched_title"] = matched_title
             # Add magnet link
@@ -134,7 +123,7 @@ def filter_and_match(entries, watchlist, category=TARGET_CATEGORY):
     return matches
 
 
-def run_once(download=False):
+def run_once(config: Config, download: bool = False) -> int:
     """
     Run a single check of the RSS feed.
     Returns the number of new entries saved.
@@ -146,19 +135,19 @@ def run_once(download=False):
     logger.debug(f"Watchlist: {titles}")
 
     # Get feed entries
-    feed_entries = get_feed_entries(rss_url=FEED_URL)
+    feed_entries = get_feed_entries(config.feed_url, config.user_agent)
     logger.info(f"Total feed entries: {len(feed_entries)}")
 
     # Filter and match
-    matches = filter_and_match(feed_entries, titles)
+    matches = filter_and_match(feed_entries, titles, config.target_category)
     logger.info(f"Matched entries: {len(matches)}")
 
     # Get seen hashes to identify new matches
-    seen_hashes = storage.load_seen_hashes(MATCHES_FILE)
+    seen_hashes = storage.load_seen_hashes(config.matches_file)
     new_matches = [m for m in matches if m.get("infohash") not in seen_hashes]
 
     # Save matches (with deduplication)
-    new_count = storage.save_matches(MATCHES_FILE, matches)
+    new_count = storage.save_matches(config.matches_file, matches)
     logger.info(f"New entries saved: {new_count}")
 
     # Log matched entries
@@ -173,13 +162,13 @@ def run_once(download=False):
     if download and new_matches:
         magnets = [m["magnet"] for m in new_matches]
         logger.info(f"Adding {len(magnets)} torrent(s) to qBittorrent")
-        success, fail = downloader.add_torrents(magnets)
+        success, fail = downloader.add_torrents(magnets, config)
         logger.info(f"qBittorrent: {success} added, {fail} failed")
 
     return new_count
 
 
-def run_daemon(interval, download=False):
+def run_daemon(config: Config, interval: int, download: bool = False) -> None:
     """
     Run continuously, polling at the specified interval.
     """
@@ -187,9 +176,9 @@ def run_daemon(interval, download=False):
 
     while not shutdown_requested:
         try:
-            run_once(download=download)
-        except Exception as e:
-            logger.error(f"Error during feed check: {e}")
+            run_once(config, download=download)
+        except Exception:
+            logger.exception("Error during feed check")
 
         # Sleep in small increments to check for shutdown
         elapsed = 0
@@ -229,9 +218,9 @@ def cmd_watchlist_remove(args):
         print(f"Not found: {title}")
 
 
-def cmd_run(args):
+def cmd_run(args, config: Config) -> None:
     """Handle run command (default behavior)."""
-    setup_logging(verbose=args.verbose)
+    setup_logging(config, verbose=args.verbose)
     logger.info("MangaMouser RSS Monitor")
 
     # Register signal handlers
@@ -239,9 +228,9 @@ def cmd_run(args):
     signal.signal(signal.SIGTERM, signal_handler)
 
     if args.daemon:
-        run_daemon(args.interval, download=args.download)
+        run_daemon(config, args.interval, download=args.download)
     else:
-        run_once(download=args.download)
+        run_once(config, download=args.download)
 
 
 def format_size(size_bytes):
@@ -286,9 +275,9 @@ def is_completed_state(state):
     return state in ["uploading", "pausedUP", "queuedUP", "stalledUP", "forcedUP"]
 
 
-def cmd_downloads_list(args):
+def cmd_downloads_list(args, config: Config) -> None:
     """Handle downloads list command."""
-    matches = storage.load_all_matches(MATCHES_FILE)
+    matches = storage.load_all_matches(config.matches_file)
 
     if not matches:
         print("No tracked downloads")
@@ -296,7 +285,7 @@ def cmd_downloads_list(args):
 
     # Get current status from qBittorrent
     infohashes = [m.get("infohash") for m in matches if m.get("infohash")]
-    status_map = downloader.get_torrent_status(infohashes)
+    status_map = downloader.get_torrent_status(infohashes, config)
 
     # Merge status into matches
     if status_map:
@@ -336,22 +325,22 @@ def cmd_downloads_list(args):
             print()
 
 
-def cmd_downloads_sync(args):
+def cmd_downloads_sync(args, config: Config) -> None:
     """Handle downloads sync command."""
-    matches = storage.load_all_matches(MATCHES_FILE)
+    matches = storage.load_all_matches(config.matches_file)
 
     if not matches:
         print("No tracked downloads to sync")
         return
 
     infohashes = [m.get("infohash") for m in matches if m.get("infohash")]
-    status_map = downloader.get_torrent_status(infohashes)
+    status_map = downloader.get_torrent_status(infohashes, config)
 
     if status_map is None:
         print("Failed to connect to qBittorrent")
         return
 
-    updated = storage.update_all_statuses(MATCHES_FILE, status_map)
+    updated = storage.update_all_statuses(config.matches_file, status_map)
     print(f"Synced {updated} download(s) from qBittorrent")
 
 
@@ -467,8 +456,20 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def main() -> None:
     args = parse_args()
+
+    # Load config - required for most commands
+    # Watchlist commands don't need full config (no FEED_URL required)
+    config = None
+    needs_config = args.command not in ("watchlist",) or args.command is None
+
+    if needs_config:
+        try:
+            config = load_config()
+        except ConfigError as e:
+            print(f"Configuration error: {e}", file=sys.stderr)
+            sys.exit(1)
 
     # Handle subcommands
     if args.command == "watchlist":
@@ -482,18 +483,21 @@ def main():
             # Default to list if no watchlist subcommand
             cmd_watchlist_list(args)
     elif args.command == "downloads":
+        assert config is not None  # Config loaded above for downloads command
         if args.downloads_command == "list":
-            cmd_downloads_list(args)
+            cmd_downloads_list(args, config)
         elif args.downloads_command == "sync":
-            cmd_downloads_sync(args)
+            cmd_downloads_sync(args, config)
         else:
             # Default to list if no downloads subcommand
-            cmd_downloads_list(args)
+            cmd_downloads_list(args, config)
     elif args.command == "run":
-        cmd_run(args)
+        assert config is not None  # Config loaded above for run command
+        cmd_run(args, config)
     else:
         # Default behavior (no subcommand) - run RSS monitor
-        cmd_run(args)
+        assert config is not None  # Config loaded above for default run
+        cmd_run(args, config)
 
 
 if __name__ == "__main__":

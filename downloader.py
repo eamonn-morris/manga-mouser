@@ -1,39 +1,31 @@
+from __future__ import annotations
+
 import logging
-import os
+from typing import TYPE_CHECKING
 
 import qbittorrentapi
+
+if TYPE_CHECKING:
+    from config import Config
 
 logger = logging.getLogger("mangamouser")
 
 
-def get_config():
-    """
-    Get qBittorrent configuration from environment variables.
-    """
-    return {
-        "host": os.getenv("QB_HOST", "localhost"),
-        "port": int(os.getenv("QB_PORT", "8080")),
-        "username": os.getenv("QB_USER", ""),
-        "password": os.getenv("QB_PASSWORD", ""),
-        "category": os.getenv("QB_CATEGORY", "manga"),
-    }
-
-
-def connect():
+def connect(config: Config) -> qbittorrentapi.Client | None:
     """
     Authenticate with qBittorrent and return client instance.
     Returns None if connection fails.
     """
-    config = get_config()
+    qb = config.qbittorrent
     try:
         client = qbittorrentapi.Client(
-            host=config["host"],
-            port=config["port"],
-            username=config["username"],
-            password=config["password"],
+            host=qb.host,
+            port=qb.port,
+            username=qb.username,
+            password=qb.password,
         )
         client.auth_log_in()
-        logger.debug(f"Connected to qBittorrent at {config['host']}:{config['port']}")
+        logger.debug(f"Connected to qBittorrent at {qb.host}:{qb.port}")
         return client
     except qbittorrentapi.LoginFailed as e:
         logger.error(f"qBittorrent login failed: {e}")
@@ -43,25 +35,24 @@ def connect():
         return None
 
 
-def is_available():
+def is_available(config: Config) -> bool:
     """
     Check if qBittorrent is reachable.
     """
-    client = connect()
+    client = connect(config)
     if client:
         client.auth_log_out()
         return True
     return False
 
 
-def add_torrent(client, magnet, category=None):
+def add_torrent(
+    client: qbittorrentapi.Client, magnet: str, category: str
+) -> bool:
     """
     Add magnet link to qBittorrent client.
     Returns True on success, False on failure.
     """
-    if category is None:
-        category = get_config()["category"]
-
     try:
         result = client.torrents_add(urls=magnet, category=category)
         if result == "Ok.":
@@ -75,7 +66,7 @@ def add_torrent(client, magnet, category=None):
         return False
 
 
-def add_torrents(magnets):
+def add_torrents(magnets: list[str], config: Config) -> tuple[int, int]:
     """
     Add multiple magnet links to qBittorrent.
     Returns tuple of (success_count, fail_count).
@@ -83,16 +74,17 @@ def add_torrents(magnets):
     if not magnets:
         return 0, 0
 
-    client = connect()
+    client = connect(config)
     if not client:
         logger.warning("Cannot add torrents: qBittorrent unavailable")
         return 0, len(magnets)
 
     success_count = 0
     fail_count = 0
+    category = config.qbittorrent.category
 
     for magnet in magnets:
-        if add_torrent(client, magnet):
+        if add_torrent(client, magnet, category):
             success_count += 1
         else:
             fail_count += 1
@@ -101,7 +93,9 @@ def add_torrents(magnets):
     return success_count, fail_count
 
 
-def get_torrent_status(infohashes):
+def get_torrent_status(
+    infohashes: list[str], config: Config
+) -> dict[str, dict] | None:
     """
     Query qBittorrent for status of torrents by infohash.
     Returns dict mapping infohash -> status dict with keys:
@@ -117,7 +111,7 @@ def get_torrent_status(infohashes):
     if not infohashes:
         return {}
 
-    client = connect()
+    client = connect(config)
     if not client:
         logger.warning("Cannot get torrent status: qBittorrent unavailable")
         return None
@@ -148,19 +142,18 @@ def get_torrent_status(infohashes):
         return None
 
 
-def get_all_torrents():
+def get_all_torrents(config: Config) -> list[dict] | None:
     """
     Get all torrents from qBittorrent.
     Returns list of torrent status dicts or None if connection fails.
     """
-    client = connect()
+    client = connect(config)
     if not client:
         logger.warning("Cannot get torrents: qBittorrent unavailable")
         return None
 
     try:
-        config = get_config()
-        category = config["category"]
+        category = config.qbittorrent.category
         torrents = client.torrents_info(category=category)
         results = []
         for torrent in torrents:
