@@ -35,7 +35,14 @@ def format_state(state: str) -> str:
 
 def is_active_state(state: str) -> bool:
     """Check if torrent state is active (downloading or seeding)."""
-    return state in ["downloading", "uploading", "forcedDL", "forcedUP", "stalledDL", "stalledUP"]
+    return state in [
+        "downloading",
+        "uploading",
+        "forcedDL",
+        "forcedUP",
+        "stalledDL",
+        "stalledUP",
+    ]
 
 
 def is_completed_state(state: str) -> bool:

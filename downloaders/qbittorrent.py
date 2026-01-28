@@ -124,7 +124,9 @@ class QBittorrentDownloader:
         client.auth_log_out()
         return success_count, fail_count
 
-    def get_torrent_status(self, infohashes: list[str]) -> dict[str, TorrentStatus] | None:
+    def get_torrent_status(
+        self, infohashes: list[str]
+    ) -> dict[str, TorrentStatus] | None:
         """
         Get the status of torrents by infohash.
 
@@ -212,16 +214,18 @@ class QBittorrentDownloader:
             torrents = client.torrents_info(category=self._qb.category)
             results = []
             for torrent in torrents:
-                results.append({
-                    "hash": torrent.hash.lower(),
-                    "state": torrent.state,
-                    "progress": torrent.progress,
-                    "name": torrent.name,
-                    "size": torrent.size,
-                    "downloaded": torrent.downloaded,
-                    "uploaded": torrent.uploaded,
-                    "ratio": torrent.ratio,
-                })
+                results.append(
+                    {
+                        "hash": torrent.hash.lower(),
+                        "state": torrent.state,
+                        "progress": torrent.progress,
+                        "name": torrent.name,
+                        "size": torrent.size,
+                        "downloaded": torrent.downloaded,
+                        "uploaded": torrent.uploaded,
+                        "ratio": torrent.ratio,
+                    }
+                )
             client.auth_log_out()
             return results
         except Exception:

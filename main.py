@@ -140,9 +140,17 @@ def cmd_downloads_list(args, config: Config) -> None:
 
     # Filter by state
     if getattr(args, "active", False):
-        matches = [m for m in matches if is_active_state(m.get("download_status", {}).get("state", ""))]
+        matches = [
+            m
+            for m in matches
+            if is_active_state(m.get("download_status", {}).get("state", ""))
+        ]
     elif getattr(args, "completed", False):
-        matches = [m for m in matches if is_completed_state(m.get("download_status", {}).get("state", ""))]
+        matches = [
+            m
+            for m in matches
+            if is_completed_state(m.get("download_status", {}).get("state", ""))
+        ]
 
     if not matches:
         print("No matching downloads")
@@ -189,16 +197,32 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="MangaMouser RSS Monitor - Watch for manga releases"
     )
-    parser.add_argument("-v", "--verbose", action="store_true", help="Enable DEBUG logging")
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Enable DEBUG logging"
+    )
 
     subparsers = parser.add_subparsers(dest="command")
 
     # Run subcommand
     run_parser = subparsers.add_parser("run", help="Run RSS monitor")
-    run_parser.add_argument("--once", action="store_true", default=True, help="Run once and exit (default)")
-    run_parser.add_argument("--daemon", action="store_true", help="Run continuously with polling")
-    run_parser.add_argument("--interval", type=int, default=300, metavar="N", help="Polling interval in seconds (default: 300)")
-    run_parser.add_argument("--download", action="store_true", help="Auto-download matched torrents via qBittorrent")
+    run_parser.add_argument(
+        "--once", action="store_true", default=True, help="Run once and exit (default)"
+    )
+    run_parser.add_argument(
+        "--daemon", action="store_true", help="Run continuously with polling"
+    )
+    run_parser.add_argument(
+        "--interval",
+        type=int,
+        default=300,
+        metavar="N",
+        help="Polling interval in seconds (default: 300)",
+    )
+    run_parser.add_argument(
+        "--download",
+        action="store_true",
+        help="Auto-download matched torrents via qBittorrent",
+    )
 
     # Watchlist subcommand
     watchlist_parser = subparsers.add_parser("watchlist", help="Manage watchlist")
@@ -206,22 +230,32 @@ def parse_args() -> argparse.Namespace:
     watchlist_sub.add_parser("list", help="List all watchlist titles")
     add_parser = watchlist_sub.add_parser("add", help="Add title to watchlist")
     add_parser.add_argument("title", help="Title to add")
-    remove_parser = watchlist_sub.add_parser("remove", help="Remove title from watchlist")
+    remove_parser = watchlist_sub.add_parser(
+        "remove", help="Remove title from watchlist"
+    )
     remove_parser.add_argument("title", help="Title to remove")
 
     # Downloads subcommand
     downloads_parser = subparsers.add_parser("downloads", help="Manage downloads")
     downloads_sub = downloads_parser.add_subparsers(dest="downloads_command")
     list_parser = downloads_sub.add_parser("list", help="List tracked downloads")
-    list_parser.add_argument("--active", action="store_true", help="Only show active downloads")
-    list_parser.add_argument("--completed", action="store_true", help="Only show completed downloads")
+    list_parser.add_argument(
+        "--active", action="store_true", help="Only show active downloads"
+    )
+    list_parser.add_argument(
+        "--completed", action="store_true", help="Only show completed downloads"
+    )
     list_parser.add_argument("--json", action="store_true", help="Output as JSON")
     downloads_sub.add_parser("sync", help="Sync download status from qBittorrent")
 
     # Legacy flags for backward compatibility
-    parser.add_argument("--once", action="store_true", default=True, help=argparse.SUPPRESS)
+    parser.add_argument(
+        "--once", action="store_true", default=True, help=argparse.SUPPRESS
+    )
     parser.add_argument("--daemon", action="store_true", help=argparse.SUPPRESS)
-    parser.add_argument("--interval", type=int, default=300, metavar="N", help=argparse.SUPPRESS)
+    parser.add_argument(
+        "--interval", type=int, default=300, metavar="N", help=argparse.SUPPRESS
+    )
     parser.add_argument("--download", action="store_true", help=argparse.SUPPRESS)
 
     return parser.parse_args()

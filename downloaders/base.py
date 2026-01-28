@@ -41,7 +41,9 @@ class Downloader(Protocol):
         """
         ...
 
-    def get_torrent_status(self, infohashes: list[str]) -> dict[str, TorrentStatus] | None:
+    def get_torrent_status(
+        self, infohashes: list[str]
+    ) -> dict[str, TorrentStatus] | None:
         """
         Get the status of torrents by infohash.
 
