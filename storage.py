@@ -1,4 +1,5 @@
 import json
+import tempfile
 from pathlib import Path
 
 
@@ -66,10 +67,28 @@ def load_all_matches(filepath):
     return matches
 
 
+def _atomic_write_matches(filepath: Path, matches: list[dict]) -> None:
+    """
+    Atomically write matches to a JSONL file using temp file + rename.
+    """
+    filepath.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        dir=filepath.parent,
+        prefix=".matches_",
+        suffix=".tmp",
+        delete=False,
+    ) as tmp:
+        for match in matches:
+            tmp.write(json.dumps(match) + "\n")
+        tmp_path = Path(tmp.name)
+    tmp_path.replace(filepath)
+
+
 def update_match_status(filepath, infohash, status_dict):
     """
     Update a match entry with download status.
-    Rewrites the file with updated entry.
+    Rewrites the file atomically with updated entry.
     Returns True if entry was found and updated.
     """
     filepath = Path(filepath)
@@ -84,10 +103,7 @@ def update_match_status(filepath, infohash, status_dict):
             break
 
     if found:
-        # Rewrite file with updated matches
-        with open(filepath, "w") as f:
-            for match in matches:
-                f.write(json.dumps(match) + "\n")
+        _atomic_write_matches(filepath, matches)
 
     return found
 
@@ -112,8 +128,6 @@ def update_all_statuses(filepath, status_map):
             updated += 1
 
     if updated > 0:
-        with open(filepath, "w") as f:
-            for match in matches:
-                f.write(json.dumps(match) + "\n")
+        _atomic_write_matches(filepath, matches)
 
     return updated

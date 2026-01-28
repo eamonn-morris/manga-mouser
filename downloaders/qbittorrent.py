@@ -179,38 +179,22 @@ class QBittorrentDownloader:
         Returns:
             Dict mapping infohash to status dict, or None if unavailable.
         """
-        if not infohashes:
-            return {}
-
-        client = self._connect()
-        if not client:
-            logger.warning("Cannot get torrent status: qBittorrent unavailable")
+        status_map = self.get_torrent_status(infohashes)
+        if status_map is None:
             return None
 
-        # Normalize infohashes to lowercase for comparison
-        hash_set = {h.lower() for h in infohashes}
-
-        try:
-            torrents = client.torrents_info()
-            results: dict[str, dict] = {}
-            for torrent in torrents:
-                torrent_hash = torrent.hash.lower()
-                if torrent_hash in hash_set:
-                    results[torrent_hash] = {
-                        "state": torrent.state,
-                        "progress": torrent.progress,
-                        "name": torrent.name,
-                        "size": torrent.size,
-                        "downloaded": torrent.downloaded,
-                        "uploaded": torrent.uploaded,
-                        "ratio": torrent.ratio,
-                    }
-            client.auth_log_out()
-            return results
-        except Exception:
-            logger.exception("Failed to get torrent status")
-            client.auth_log_out()
-            return None
+        return {
+            h: {
+                "state": s.state,
+                "progress": s.progress,
+                "name": s.name,
+                "size": s.size,
+                "downloaded": s.downloaded,
+                "uploaded": s.uploaded,
+                "ratio": s.ratio,
+            }
+            for h, s in status_map.items()
+        }
 
     def get_all_torrents(self) -> list[dict] | None:
         """

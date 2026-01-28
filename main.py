@@ -26,6 +26,9 @@ logger = logging.getLogger("mangamouser")
 
 def setup_logging(config: Config, verbose: bool = False) -> None:
     """Configure logging to stdout and file."""
+    if logger.handlers:
+        return
+
     level = logging.DEBUG if verbose else logging.INFO
     formatter = logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s")
 
