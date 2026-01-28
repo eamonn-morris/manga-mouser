@@ -43,11 +43,11 @@ class QBittorrentDownloader:
             client.auth_log_in()
             logger.debug(f"Connected to qBittorrent at {self._qb.host}:{self._qb.port}")
             return client
-        except qbittorrentapi.LoginFailed as e:
-            logger.error(f"qBittorrent login failed: {e}")
+        except qbittorrentapi.LoginFailed:
+            logger.exception("qBittorrent login failed")
             return None
-        except qbittorrentapi.APIConnectionError as e:
-            logger.error(f"qBittorrent connection error: {e}")
+        except qbittorrentapi.APIConnectionError:
+            logger.exception("qBittorrent connection error")
             return None
 
     def is_available(self) -> bool:
@@ -82,8 +82,8 @@ class QBittorrentDownloader:
             else:
                 logger.warning(f"qBittorrent returned unexpected result: {result}")
                 return False
-        except Exception as e:
-            logger.error(f"Failed to add torrent: {e}")
+        except Exception:
+            logger.exception("Failed to add torrent")
             client.auth_log_out()
             return False
 
@@ -117,8 +117,8 @@ class QBittorrentDownloader:
                 else:
                     logger.warning(f"qBittorrent returned unexpected result: {result}")
                     fail_count += 1
-            except Exception as e:
-                logger.error(f"Failed to add torrent: {e}")
+            except Exception:
+                logger.exception("Failed to add torrent")
                 fail_count += 1
 
         client.auth_log_out()
@@ -162,8 +162,8 @@ class QBittorrentDownloader:
                     )
             client.auth_log_out()
             return results
-        except Exception as e:
-            logger.error(f"Failed to get torrent status: {e}")
+        except Exception:
+            logger.exception("Failed to get torrent status")
             client.auth_log_out()
             return None
 
@@ -207,8 +207,8 @@ class QBittorrentDownloader:
                     }
             client.auth_log_out()
             return results
-        except Exception as e:
-            logger.error(f"Failed to get torrent status: {e}")
+        except Exception:
+            logger.exception("Failed to get torrent status")
             client.auth_log_out()
             return None
 
@@ -240,7 +240,7 @@ class QBittorrentDownloader:
                 })
             client.auth_log_out()
             return results
-        except Exception as e:
-            logger.error(f"Failed to get torrents: {e}")
+        except Exception:
+            logger.exception("Failed to get torrents")
             client.auth_log_out()
             return None

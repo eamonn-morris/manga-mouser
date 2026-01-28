@@ -12,7 +12,8 @@ import signal
 import sys
 import time
 
-from config import Config, ConfigError, load_config
+from config import Config, load_config
+from exceptions import MangaMouserError
 from formatting import format_size, format_state, is_active_state, is_completed_state
 from service import MangaMouser
 import storage
@@ -225,32 +226,33 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     """Main entry point."""
-    args = parse_args()
-
-    # Watchlist commands don't need config
-    if args.command == "watchlist":
-        if args.watchlist_command == "add":
-            cmd_watchlist_add(args)
-        elif args.watchlist_command == "remove":
-            cmd_watchlist_remove(args)
-        else:
-            cmd_watchlist_list(args)
-        return
-
-    # All other commands need config
     try:
-        config = load_config()
-    except ConfigError as e:
-        print(f"Configuration error: {e}", file=sys.stderr)
-        sys.exit(1)
+        args = parse_args()
 
-    if args.command == "downloads":
-        if args.downloads_command == "sync":
-            cmd_downloads_sync(args, config)
+        # Watchlist commands don't need config
+        if args.command == "watchlist":
+            if args.watchlist_command == "add":
+                cmd_watchlist_add(args)
+            elif args.watchlist_command == "remove":
+                cmd_watchlist_remove(args)
+            else:
+                cmd_watchlist_list(args)
+            return
+
+        # All other commands need config
+        config = load_config()
+
+        if args.command == "downloads":
+            if args.downloads_command == "sync":
+                cmd_downloads_sync(args, config)
+            else:
+                cmd_downloads_list(args, config)
         else:
-            cmd_downloads_list(args, config)
-    else:
-        cmd_run(args, config)
+            cmd_run(args, config)
+
+    except MangaMouserError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

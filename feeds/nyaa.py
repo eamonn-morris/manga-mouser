@@ -1,8 +1,13 @@
 """Nyaa.si RSS feed source."""
 
+import logging
+
 import feedparser
 
+from exceptions import FeedError
 from models import FeedEntry
+
+logger = logging.getLogger("mangamouser")
 
 
 class NyaaFeedSource:
@@ -25,20 +30,38 @@ class NyaaFeedSource:
 
         Returns:
             List of FeedEntry objects from the feed.
+
+        Raises:
+            FeedError: If feed parsing fails or required fields are missing.
         """
-        feed = feedparser.parse(self.url, agent=self.user_agent)
+        try:
+            feed = feedparser.parse(self.url, agent=self.user_agent)
+        except Exception as e:
+            logger.exception("Failed to fetch RSS feed")
+            raise FeedError(f"Failed to fetch RSS feed: {e}") from e
+
+        if feed.bozo and feed.bozo_exception:
+            logger.warning(f"Feed parsing warning: {feed.bozo_exception}")
 
         entries = []
         for entry in feed.entries:
+            title = getattr(entry, "title", None)
+            link = getattr(entry, "link", None)
+            infohash = getattr(entry, "nyaa_infohash", None)
+
+            if not title or not infohash:
+                logger.warning(f"Skipping entry with missing required fields: {entry}")
+                continue
+
             entries.append(
                 FeedEntry(
-                    title=entry.title,
-                    link=entry.link,
-                    category=entry.nyaa_category,
-                    size=entry.nyaa_size,
-                    infohash=entry.nyaa_infohash,
-                    published=entry.published,
-                    seeders=int(entry.nyaa_seeders),
+                    title=title,
+                    link=link or "",
+                    category=getattr(entry, "nyaa_category", None) or "",
+                    size=getattr(entry, "nyaa_size", None) or "",
+                    infohash=infohash,
+                    published=getattr(entry, "published", None) or "",
+                    seeders=int(getattr(entry, "nyaa_seeders", 0) or 0),
                 )
             )
 

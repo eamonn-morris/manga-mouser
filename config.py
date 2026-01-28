@@ -10,11 +10,10 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from exceptions import ConfigError
 
-class ConfigError(Exception):
-    """Raised when configuration is invalid or missing."""
-
-    pass
+# Re-export for backward compatibility
+__all__ = ["Config", "ConfigError", "QBittorrentConfig", "load_config"]
 
 
 @dataclass
