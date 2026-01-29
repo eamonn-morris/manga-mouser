@@ -1,5 +1,5 @@
 FEED_URL=""
-CATEGORY=""
+TARGET_CATEGORY=""
 
 # qBittorrent WebUI
 QB_HOST=

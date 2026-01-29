@@ -43,7 +43,7 @@ cp .env.tpl .env
 FEED_URL="https://nyaa.si/?page=rss&c=3_1"
 
 # Category filter (optional, defaults to "Literature - English-translated")
-CATEGORY="Literature - English-translated"
+TARGET_CATEGORY="Literature - English-translated"
 
 # qBittorrent WebUI settings (required for --download)
 QB_HOST=localhost
@@ -159,6 +159,7 @@ The `sync` command updates stored match records with current download status fro
 All output files are stored in the `downloads/` directory:
 
 - `matches.jsonl` - JSONL file of all matched entries (deduplicated by infohash)
+- `status.json` - Download status cache from qBittorrent
 - `mouser.log` - Application log file
 
 ## Deployment (systemd)
