@@ -12,12 +12,12 @@ import signal
 import sys
 import time
 
+import storage
+import watchlist
 from config import Config, load_config
 from exceptions import MangaMouserError
 from formatting import format_size, format_state, is_active_state, is_completed_state
 from service import MangaMouser
-import storage
-import watchlist
 
 # Global state for signal handling
 shutdown_requested = False
@@ -181,6 +181,13 @@ def cmd_downloads_sync(args, config: Config) -> None:
         print(f"Synced {updated} download(s) from qBittorrent")
 
 
+def cmd_dashboard() -> None:
+    """Launch the TUI dashboard."""
+    from tui.app import run_dashboard
+
+    run_dashboard()
+
+
 # --- CLI Parsing ---
 
 
@@ -237,6 +244,9 @@ def parse_args() -> argparse.Namespace:
     list_parser.add_argument("--json", action="store_true", help="Output as JSON")
     downloads_sub.add_parser("sync", help="Sync download status from qBittorrent")
 
+    # Dashboard subcommand
+    subparsers.add_parser("dashboard", help="Launch TUI dashboard")
+
     # Legacy flags for backward compatibility
     parser.add_argument("--daemon", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
@@ -270,6 +280,8 @@ def main() -> None:
                 cmd_downloads_sync(args, config)
             else:
                 cmd_downloads_list(args, config)
+        elif args.command == "dashboard":
+            cmd_dashboard()
         else:
             cmd_run(args, config)
 

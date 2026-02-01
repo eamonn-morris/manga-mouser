@@ -22,3 +22,5 @@ watchlist.json
 
 # logs
 *.log
+matches.jsonl
+status.json

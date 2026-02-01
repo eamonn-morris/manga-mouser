@@ -129,6 +129,8 @@ class MangaMouser:
         """
         Sync download status from qBittorrent to storage.
 
+        Torrents no longer in qBittorrent are marked with state "removed".
+
         Returns:
             Number of matches updated, or -1 if connection failed.
         """
@@ -141,5 +143,11 @@ class MangaMouser:
 
         if status_map is None:
             return -1
+
+        # Mark torrents not found in qBittorrent as "removed"
+        for infohash in infohashes:
+            h = infohash.lower()
+            if h not in status_map:
+                status_map[h] = {"state": "removed", "progress": 0}
 
         return storage.update_all_statuses(self.config.status_file, status_map)

@@ -1,0 +1,1 @@
+"""MangaMouser TUI dashboard."""

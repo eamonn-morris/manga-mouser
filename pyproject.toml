@@ -8,4 +8,13 @@ dependencies = [
     "feedparser>=6.0.12",
     "python-dotenv>=1.2.1",
     "qbittorrent-api>=2024.2.59",
+    "textual>=2.0.0",
 ]
+
+[project.optional-dependencies]
+web = ["textual-web>=0.1.0"]
+dev = ["textual-dev>=1.0.0"]
+
+[project.scripts]
+mangamouser = "main:main"
+mangamouser-tui = "tui.app:run_dashboard"
