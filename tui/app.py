@@ -7,10 +7,17 @@ from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container
-from textual.widgets import Footer, Header, Rule
+from textual.widgets import (
+    Footer,
+    Header,
+    LoadingIndicator,
+    TabbedContent,
+    TabPane,
+)
 from textual.worker import Worker, WorkerState
 
 from config import load_config
+from exceptions import ConfigError
 from service import MangaMouser
 import storage
 import watchlist as watchlist_module
@@ -30,8 +37,11 @@ class MangaMouserDashboard(App):
         Binding("r", "refresh", "Refresh"),
         Binding("s", "sync", "Sync"),
         Binding("c", "check_feed", "Check Feed"),
-        Binding("w", "toggle_watchlist", "Watchlist", priority=True),
         Binding("d", "toggle_dark", "Dark Mode"),
+        Binding("f1", "show_help", "Help"),
+        Binding("1", "switch_tab('downloads')", "Downloads", show=False),
+        Binding("2", "switch_tab('watchlist')", "Watchlist", show=False),
+        Binding("3", "switch_tab('log')", "Log", show=False),
     ]
 
     def __init__(self, feed_check_interval: int = 300):
@@ -43,25 +53,45 @@ class MangaMouserDashboard(App):
                                  Set to 0 to disable automatic feed checks.
         """
         super().__init__()
-        self.config = load_config()
-        self.service = MangaMouser(self.config)
+        self._config_error: str | None = None
+        try:
+            self.config = load_config()
+            self.service = MangaMouser(self.config)
+        except ConfigError as e:
+            self._config_error = str(e)
+            self.config = None
+            self.service = None
         self.refresh_interval = 60  # Display refresh interval
         self.feed_check_interval = feed_check_interval  # Feed check interval
         self._last_feed_check: str = "Never"
+        self._loading: bool = False
 
     def compose(self) -> ComposeResult:
         yield Header()
         with Container(id="main"):
             yield StatusPanel(id="status")
-            yield WatchlistPanel(id="watchlist")
-            yield Rule()
-            yield DownloadsTable(id="downloads")
-            yield Rule()
-            yield ActivityLog(id="log")
+            yield LoadingIndicator(id="loading")
+            with TabbedContent(id="tabs"):
+                with TabPane("Downloads", id="downloads-tab"):
+                    yield DownloadsTable(id="downloads")
+                with TabPane("Watchlist", id="watchlist-tab"):
+                    yield WatchlistPanel(id="watchlist")
+                with TabPane("Activity Log", id="log-tab"):
+                    yield ActivityLog(id="log")
         yield Footer()
 
     def on_mount(self) -> None:
         """Initialize on app startup."""
+        # Set default theme
+        self.theme = "flexoki"
+
+        # Hide loading indicator initially
+        self.query_one("#loading").display = False
+
+        if self._config_error:
+            self.log_activity(f"Config error: {self._config_error}", level="error")
+            return
+
         self.log_activity("Dashboard started")
         self.load_data()
         self._schedule_feed_check()
@@ -71,6 +101,15 @@ class MangaMouserDashboard(App):
     @work(thread=True, group="data", exclusive=True)
     def load_data(self) -> dict:
         """Load matches and status from storage."""
+        if self.config is None:
+            return {
+                "matches": [],
+                "count": 0,
+                "active": 0,
+                "watchlist": [],
+                "last_feed_check": self._last_feed_check,
+            }
+
         matches = storage.load_all_matches(self.config.matches_file)
         matches = storage.get_status_for_matches(self.config.status_file, matches)
         titles = watchlist_module.load()
@@ -93,19 +132,34 @@ class MangaMouserDashboard(App):
     @work(thread=True, group="sync", exclusive=True)
     def sync_downloads(self) -> int:
         """Sync download status from qBittorrent."""
+        if self.service is None:
+            return -1
         return self.service.sync_download_status()
 
     @work(thread=True, group="feed", exclusive=True)
     def check_feed(self) -> int:
         """Check RSS feed for new matches."""
+        if self.service is None:
+            return -1
         return self.service.check_feed(download=True)
 
     def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
         """Handle worker completion."""
-        if event.state == WorkerState.SUCCESS:
+        if event.state == WorkerState.RUNNING:
+            self._show_loading(True)
+        elif event.state == WorkerState.SUCCESS:
+            self._show_loading(False)
             self._handle_worker_success(event.worker)
         elif event.state == WorkerState.ERROR:
+            self._show_loading(False)
             self.log_activity(f"Error: {event.worker.error}", level="error")
+
+    def _show_loading(self, show: bool) -> None:
+        """Show or hide the loading indicator."""
+        try:
+            self.query_one("#loading").display = show
+        except Exception:
+            pass
 
     def _handle_worker_success(self, worker: Worker) -> None:
         """Process successful worker results."""
@@ -186,15 +240,33 @@ class MangaMouserDashboard(App):
         self.log_activity("Checking RSS feed...")
         self.check_feed()
 
-    def action_toggle_watchlist(self) -> None:
-        """Toggle watchlist panel visibility."""
-        try:
-            watchlist = self.query_one("#watchlist", WatchlistPanel)
-            watchlist.toggle()
-            state = "collapsed" if watchlist.collapsed else "expanded"
-            self.log_activity(f"Watchlist {state}")
-        except Exception as e:
-            self.log_activity(f"Toggle error: {e}", level="error")
+    def action_switch_tab(self, tab_id: str) -> None:
+        """Switch to a specific tab."""
+        tab_map = {
+            "downloads": "downloads-tab",
+            "watchlist": "watchlist-tab",
+            "log": "log-tab",
+        }
+        if tab_id in tab_map:
+            self.query_one("#tabs", TabbedContent).active = tab_map[tab_id]
+
+    def action_show_help(self) -> None:
+        """Show keyboard shortcuts help."""
+        help_text = """[b]Keyboard Shortcuts[/b]
+
+[cyan]q[/]     Quit
+[cyan]r[/]     Refresh data
+[cyan]s[/]     Sync with qBittorrent
+[cyan]c[/]     Check RSS feed
+[cyan]d[/]     Toggle dark mode
+[cyan]F1[/]    Show this help
+
+[b]Tab Navigation[/b]
+[cyan]1[/]     Downloads tab
+[cyan]2[/]     Watchlist tab
+[cyan]3[/]     Activity Log tab
+"""
+        self.notify(help_text, title="Help", timeout=10)
 
     # --- Event Handlers ---
 

@@ -1,13 +1,13 @@
 """Watchlist panel widget displaying tracked titles."""
 
 from textual.app import ComposeResult
-from textual.containers import Vertical
+from textual.containers import VerticalScroll
 from textual.message import Message
-from textual.widgets import Collapsible, Input, Label, Static
+from textual.widgets import Input, Label, Static
 
 
 class WatchlistPanel(Static):
-    """Panel containing a collapsible watchlist."""
+    """Panel displaying watchlist titles with input for adding new ones."""
 
     class TitleAdded(Message):
         """Message sent when a title is added."""
@@ -21,14 +21,13 @@ class WatchlistPanel(Static):
         self._titles = titles or []
 
     def compose(self) -> ComposeResult:
-        with Collapsible(title="Watchlist", collapsed=True, id="watchlist-collapsible"):
-            with Vertical(id="watchlist-content"):
-                if self._titles:
-                    for title in self._titles:
-                        yield Label(f"• {title}", classes="watchlist-item")
-                else:
-                    yield Label("[dim]No titles in watchlist[/]", classes="watchlist-item")
-            yield Input(placeholder="Add title and press Enter...", id="watchlist-input")
+        yield Input(placeholder="Add title and press Enter...", id="watchlist-input")
+        with VerticalScroll(id="watchlist-content"):
+            if self._titles:
+                for title in self._titles:
+                    yield Label(f"• {title}", classes="watchlist-item")
+            else:
+                yield Label("[dim]No titles in watchlist[/]", classes="watchlist-item")
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle input submission."""
@@ -40,25 +39,10 @@ class WatchlistPanel(Static):
     def update_titles(self, titles: list[str]) -> None:
         """Update the watchlist display."""
         self._titles = titles
-        content = self.query_one("#watchlist-content", Vertical)
+        content = self.query_one("#watchlist-content", VerticalScroll)
         content.query(".watchlist-item").remove()
         if titles:
             for title in titles:
                 content.mount(Label(f"• {title}", classes="watchlist-item"))
         else:
             content.mount(Label("[dim]No titles in watchlist[/]", classes="watchlist-item"))
-
-    def toggle(self) -> None:
-        """Toggle the collapsible."""
-        collapsible = self.query_one("#watchlist-collapsible", Collapsible)
-        collapsible.collapsed = not collapsible.collapsed
-
-    @property
-    def collapsed(self) -> bool:
-        """Get collapsed state."""
-        return self.query_one("#watchlist-collapsible", Collapsible).collapsed
-
-    @collapsed.setter
-    def collapsed(self, value: bool) -> None:
-        """Set collapsed state."""
-        self.query_one("#watchlist-collapsible", Collapsible).collapsed = value

@@ -8,6 +8,12 @@ Screen {
     padding: 1;
 }
 
+/* Loading Indicator */
+#loading {
+    height: 3;
+    background: transparent;
+}
+
 /* Status Panel */
 #status {
     height: 3;
@@ -19,20 +25,24 @@ Screen {
     width: 100%;
 }
 
-/* Watchlist Panel */
-#watchlist {
-    height: auto;
-    background: transparent;
+/* Tabs */
+#tabs {
+    height: 1fr;
 }
 
-#watchlist-collapsible {
-    height: auto;
+TabPane {
+    padding: 1;
+}
+
+/* Watchlist Panel */
+#watchlist {
+    height: 1fr;
     background: transparent;
 }
 
 #watchlist-content {
     height: auto;
-    max-height: 10;
+    max-height: 20;
     overflow-y: auto;
     background: transparent;
 }
