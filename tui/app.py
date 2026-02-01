@@ -196,6 +196,17 @@ class MangaMouserDashboard(App):
         except Exception as e:
             self.log_activity(f"Toggle error: {e}", level="error")
 
+    # --- Event Handlers ---
+
+    def on_watchlist_panel_title_added(self, event: WatchlistPanel.TitleAdded) -> None:
+        """Handle new title added from watchlist input."""
+        title = event.title
+        if watchlist_module.add(title):
+            self.log_activity(f"Added '{title}' to watchlist", level="success")
+            self.load_data()
+        else:
+            self.log_activity(f"'{title}' already in watchlist", level="warning")
+
     # --- Helpers ---
 
     def log_activity(self, message: str, level: str = "info") -> None:

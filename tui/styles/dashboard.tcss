@@ -12,7 +12,7 @@ Screen {
 #status {
     height: 3;
     padding: 0 1;
-    background: $boost;
+    background: $surface;
 }
 
 #status-line {
@@ -22,24 +22,51 @@ Screen {
 /* Watchlist Panel */
 #watchlist {
     height: auto;
-    max-height: 12;
+    background: transparent;
 }
 
 #watchlist-collapsible {
     height: auto;
-    max-height: 10;
+    background: transparent;
 }
 
 #watchlist-content {
     height: auto;
-    max-height: 8;
+    max-height: 10;
     overflow-y: auto;
+    background: transparent;
+}
+
+#watchlist-input {
+    margin-top: 1;
+    width: 100%;
 }
 
 /* Downloads Table */
 #downloads {
     height: 1fr;
     margin: 1 0;
+    background: transparent;
+}
+
+DataTable {
+    background: transparent;
+}
+
+DataTable > .datatable--header {
+    background: transparent;
+}
+
+DataTable > .datatable--cursor {
+    background: $accent;
+}
+
+DataTable > .datatable--odd-row {
+    background: transparent;
+}
+
+DataTable > .datatable--even-row {
+    background: transparent;
 }
 
 /* Activity Log */
@@ -47,6 +74,7 @@ Screen {
     height: 10;
     border: solid $primary;
     padding: 0 1;
+    background: transparent;
 }
 
 Rule {

@@ -8,7 +8,7 @@ class DownloadsTable(DataTable):
 
     def on_mount(self) -> None:
         self.cursor_type = "row"
-        self.zebra_stripes = True
+        self.zebra_stripes = False
         self.add_columns("Title", "Full Name", "State", "Progress", "Size")
 
     def update_data(self, matches: list[dict]) -> None:

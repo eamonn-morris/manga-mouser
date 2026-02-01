@@ -2,11 +2,19 @@
 
 from textual.app import ComposeResult
 from textual.containers import Vertical
-from textual.widgets import Collapsible, Label, Static
+from textual.message import Message
+from textual.widgets import Collapsible, Input, Label, Static
 
 
 class WatchlistPanel(Static):
     """Panel containing a collapsible watchlist."""
+
+    class TitleAdded(Message):
+        """Message sent when a title is added."""
+
+        def __init__(self, title: str) -> None:
+            self.title = title
+            super().__init__()
 
     def __init__(self, titles: list[str] | None = None, **kwargs):
         super().__init__(**kwargs)
@@ -20,6 +28,14 @@ class WatchlistPanel(Static):
                         yield Label(f"• {title}", classes="watchlist-item")
                 else:
                     yield Label("[dim]No titles in watchlist[/]", classes="watchlist-item")
+            yield Input(placeholder="Add title and press Enter...", id="watchlist-input")
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        """Handle input submission."""
+        title = event.value.strip()
+        if title:
+            self.post_message(self.TitleAdded(title))
+            event.input.clear()
 
     def update_titles(self, titles: list[str]) -> None:
         """Update the watchlist display."""
