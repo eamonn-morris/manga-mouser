@@ -10,7 +10,7 @@ wheels/
 .venv
 
 # secrets
-.env
+*.env
 
 # scratch files
 example.json
