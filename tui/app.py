@@ -64,7 +64,7 @@ class MangaMouserDashboard(App):
         self.refresh_interval = 60  # Display refresh interval
         self.feed_check_interval = feed_check_interval  # Feed check interval
         self._last_feed_check: str = "Never"
-        self._loading: bool = False
+        self._active_workers: int = 0
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -144,15 +144,18 @@ class MangaMouserDashboard(App):
         return self.service.check_feed(download=True)
 
     def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
-        """Handle worker completion."""
+        """Handle worker state changes."""
         if event.state == WorkerState.RUNNING:
+            self._active_workers += 1
             self._show_loading(True)
-        elif event.state == WorkerState.SUCCESS:
-            self._show_loading(False)
-            self._handle_worker_success(event.worker)
-        elif event.state == WorkerState.ERROR:
-            self._show_loading(False)
-            self.log_activity(f"Error: {event.worker.error}", level="error")
+        elif event.state in (WorkerState.SUCCESS, WorkerState.ERROR, WorkerState.CANCELLED):
+            self._active_workers = max(0, self._active_workers - 1)
+            if self._active_workers == 0:
+                self._show_loading(False)
+            if event.state == WorkerState.SUCCESS:
+                self._handle_worker_success(event.worker)
+            elif event.state == WorkerState.ERROR:
+                self.log_activity(f"Error: {event.worker.error}", level="error")
 
     def _show_loading(self, show: bool) -> None:
         """Show or hide the loading indicator."""
