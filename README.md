@@ -11,6 +11,7 @@ MangaMouser monitors RSS feeds (e.g., Nyaa) for new manga releases matching your
 - Case-insensitive watchlist matching
 - Infohash-based deduplication
 - Automatic qBittorrent integration
+- Interactive TUI dashboard
 - Daemon mode with configurable polling interval
 - Systemd service/timer support
 
@@ -104,6 +105,34 @@ uv run main.py -v
 uv run main.py --daemon --verbose
 ```
 
+### Dashboard
+
+Launch the interactive TUI dashboard for a live overview of downloads, watchlist, and activity:
+
+```bash
+uv run main.py dashboard
+```
+
+The dashboard provides three tabs:
+
+1. **Downloads** - Current download status and progress
+2. **Watchlist** - Monitored manga titles
+3. **Activity Log** - Recent feed checks and match events
+
+**Keybindings:**
+
+| Key | Action |
+|-----|--------|
+| `q` | Quit |
+| `r` | Refresh data |
+| `s` | Sync with qBittorrent |
+| `c` | Check RSS feed |
+| `d` | Toggle dark mode |
+| `F1` | Show help |
+| `1/2/3` | Switch tabs (Downloads / Watchlist / Log) |
+
+The display refreshes every 60 seconds. The feed check interval is configurable via your polling settings.
+
 ### CLI Options
 
 | Option | Description |
@@ -113,6 +142,7 @@ uv run main.py --daemon --verbose
 | `--interval N` | Polling interval in seconds (default: 300) |
 | `--download` | Auto-download via qBittorrent |
 | `-v, --verbose` | Enable DEBUG logging |
+| `dashboard` | Launch interactive TUI dashboard |
 
 ### Watchlist Management
 
