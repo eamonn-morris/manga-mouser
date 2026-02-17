@@ -1,8 +1,6 @@
 """MangaMouser TUI dashboard application."""
 
 from datetime import datetime
-from functools import partial
-
 from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -94,7 +92,9 @@ class MangaMouserDashboard(App):
 
         self.log_activity("Dashboard started")
         self.load_data()
-        self._schedule_feed_check()
+        self.set_interval(self.refresh_interval, self.load_data)
+        if self.feed_check_interval > 0:
+            self.set_interval(self.feed_check_interval, self._auto_check_feed)
 
     # --- Background Workers ---
 
@@ -170,7 +170,6 @@ class MangaMouserDashboard(App):
             result = worker.result
             if result is not None:
                 self._update_display(result)
-            self._schedule_refresh()
 
         elif worker.group == "sync":
             synced = worker.result
@@ -203,28 +202,10 @@ class MangaMouserDashboard(App):
         watchlist = self.query_one("#watchlist", WatchlistPanel)
         watchlist.update_titles(data["watchlist"])
 
-    def _schedule_refresh(self) -> None:
-        """Schedule next automatic refresh."""
-        self.set_timer(
-            self.refresh_interval,
-            partial(self.load_data),
-            name="auto_refresh",
-        )
-
-    def _schedule_feed_check(self) -> None:
-        """Schedule next automatic feed check."""
-        if self.feed_check_interval > 0:
-            self.set_timer(
-                self.feed_check_interval,
-                self._auto_check_feed,
-                name="auto_feed_check",
-            )
-
     def _auto_check_feed(self) -> None:
-        """Run automatic feed check and reschedule."""
+        """Run automatic feed check."""
         self.log_activity("Auto-checking RSS feed...")
         self.check_feed()
-        self._schedule_feed_check()
 
     # --- Actions ---
 
