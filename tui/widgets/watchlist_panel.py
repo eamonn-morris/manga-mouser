@@ -45,4 +45,6 @@ class WatchlistPanel(Static):
             for title in titles:
                 content.mount(Label(f"• {title}", classes="watchlist-item"))
         else:
-            content.mount(Label("[dim]No titles in watchlist[/]", classes="watchlist-item"))
+            content.mount(
+                Label("[dim]No titles in watchlist[/]", classes="watchlist-item")
+            )

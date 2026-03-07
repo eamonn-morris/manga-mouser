@@ -10,6 +10,7 @@ import urllib.parse
 from config import Config
 from downloaders.qbittorrent import QBittorrentDownloader
 from feeds.nyaa import NyaaFeedSource
+from formatting import is_completed_state
 from models import FeedEntry, Match
 import storage
 import watchlist as watchlist_module
@@ -144,10 +145,20 @@ class MangaMouser:
         if status_map is None:
             return -1
 
-        # Mark torrents not found in qBittorrent as "removed"
+        # Mark torrents not found in qBittorrent as "removed",
+        # preserving progress for previously completed downloads
+        existing_status = storage.load_status(self.config.status_file)
         for infohash in infohashes:
             h = infohash.lower()
             if h not in status_map:
-                status_map[h] = {"state": "removed", "progress": 0}
+                prev = existing_status.get(h, {})
+                was_completed = (
+                    is_completed_state(prev.get("state", ""))
+                    or prev.get("progress", 0) >= 1.0
+                )
+                status_map[h] = {
+                    "state": "removed",
+                    "progress": 1.0 if was_completed else 0,
+                }
 
         return storage.update_all_statuses(self.config.status_file, status_map)

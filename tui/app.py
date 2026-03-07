@@ -35,6 +35,7 @@ class MangaMouserDashboard(App):
         Binding("r", "refresh", "Refresh"),
         Binding("s", "sync", "Sync"),
         Binding("c", "check_feed", "Check Feed"),
+        Binding("h", "toggle_completed_removed", "Done"),
         Binding("d", "toggle_dark", "Dark Mode"),
         Binding("f1", "show_help", "Help"),
         Binding("1", "switch_tab('downloads')", "Downloads", show=False),
@@ -63,6 +64,7 @@ class MangaMouserDashboard(App):
         self.feed_check_interval = feed_check_interval  # Feed check interval
         self._last_feed_check: str = "Never"
         self._active_workers: int = 0
+        self._show_completed_removed: bool = False
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -148,7 +150,11 @@ class MangaMouserDashboard(App):
         if event.state == WorkerState.RUNNING:
             self._active_workers += 1
             self._show_loading(True)
-        elif event.state in (WorkerState.SUCCESS, WorkerState.ERROR, WorkerState.CANCELLED):
+        elif event.state in (
+            WorkerState.SUCCESS,
+            WorkerState.ERROR,
+            WorkerState.CANCELLED,
+        ):
             self._active_workers = max(0, self._active_workers - 1)
             if self._active_workers == 0:
                 self._show_loading(False)
@@ -197,7 +203,17 @@ class MangaMouserDashboard(App):
             status.last_feed_check = data["last_feed_check"]
 
         table = self.query_one("#downloads", DownloadsTable)
-        table.update_data(data["matches"])
+        matches = data["matches"]
+        if not self._show_completed_removed:
+            matches = [
+                m
+                for m in matches
+                if not (
+                    m.get("download_status", {}).get("state") == "removed"
+                    and m.get("download_status", {}).get("progress", 0) >= 1.0
+                )
+            ]
+        table.update_data(matches)
 
         watchlist = self.query_one("#watchlist", WatchlistPanel)
         watchlist.update_titles(data["watchlist"])
@@ -224,6 +240,11 @@ class MangaMouserDashboard(App):
         self.log_activity("Checking RSS feed...")
         self.check_feed()
 
+    def action_toggle_completed_removed(self) -> None:
+        """Toggle visibility of completed+removed downloads."""
+        self._show_completed_removed = not self._show_completed_removed
+        self.load_data()
+
     def action_switch_tab(self, tab_id: str) -> None:
         """Switch to a specific tab."""
         tab_map = {
@@ -242,6 +263,7 @@ class MangaMouserDashboard(App):
 [cyan]r[/]     Refresh data
 [cyan]s[/]     Sync with qBittorrent
 [cyan]c[/]     Check RSS feed
+[cyan]h[/]     Show/hide completed+removed
 [cyan]d[/]     Toggle dark mode
 [cyan]F1[/]    Show this help
 
