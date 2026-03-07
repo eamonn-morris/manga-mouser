@@ -20,7 +20,13 @@ from service import MangaMouser
 import storage
 import watchlist as watchlist_module
 
-from tui.widgets import ActivityLog, DownloadsTable, StatusPanel, WatchlistPanel
+from tui.widgets import (
+    ActivityLog,
+    DownloadsTable,
+    LatestTable,
+    StatusPanel,
+    WatchlistPanel,
+)
 
 
 class MangaMouserDashboard(App):
@@ -38,9 +44,10 @@ class MangaMouserDashboard(App):
         Binding("h", "toggle_completed_removed", "Done"),
         Binding("d", "toggle_dark", "Dark Mode"),
         Binding("f1", "show_help", "Help"),
-        Binding("1", "switch_tab('downloads')", "Downloads", show=False),
-        Binding("2", "switch_tab('watchlist')", "Watchlist", show=False),
-        Binding("3", "switch_tab('log')", "Log", show=False),
+        Binding("1", "switch_tab('latest')", "Latest", show=False),
+        Binding("2", "switch_tab('downloads')", "Downloads", show=False),
+        Binding("3", "switch_tab('watchlist')", "Watchlist", show=False),
+        Binding("4", "switch_tab('log')", "Log", show=False),
     ]
 
     def __init__(self, feed_check_interval: int = 300):
@@ -72,6 +79,8 @@ class MangaMouserDashboard(App):
             yield StatusPanel(id="status")
             yield LoadingIndicator(id="loading")
             with TabbedContent(id="tabs"):
+                with TabPane("Latest", id="latest-tab"):
+                    yield LatestTable(id="latest")
                 with TabPane("Downloads", id="downloads-tab"):
                     yield DownloadsTable(id="downloads")
                 with TabPane("Watchlist", id="watchlist-tab"):
@@ -215,6 +224,9 @@ class MangaMouserDashboard(App):
             ]
         table.update_data(matches)
 
+        latest = self.query_one("#latest", LatestTable)
+        latest.update_data(data["matches"])
+
         watchlist = self.query_one("#watchlist", WatchlistPanel)
         watchlist.update_titles(data["watchlist"])
 
@@ -248,6 +260,7 @@ class MangaMouserDashboard(App):
     def action_switch_tab(self, tab_id: str) -> None:
         """Switch to a specific tab."""
         tab_map = {
+            "latest": "latest-tab",
             "downloads": "downloads-tab",
             "watchlist": "watchlist-tab",
             "log": "log-tab",
@@ -268,9 +281,10 @@ class MangaMouserDashboard(App):
 [cyan]F1[/]    Show this help
 
 [b]Tab Navigation[/b]
-[cyan]1[/]     Downloads tab
-[cyan]2[/]     Watchlist tab
-[cyan]3[/]     Activity Log tab
+[cyan]1[/]     Latest tab
+[cyan]2[/]     Downloads tab
+[cyan]3[/]     Watchlist tab
+[cyan]4[/]     Activity Log tab
 """
         self.notify(help_text, title="Help", timeout=10)
 
