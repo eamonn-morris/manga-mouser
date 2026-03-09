@@ -1,5 +1,7 @@
 """Latest downloads table widget showing the most recent downloads."""
 
+from email.utils import parsedate_to_datetime
+
 from textual.widgets import DataTable
 
 
@@ -20,6 +22,15 @@ class LatestTable(DataTable):
 
             self.add_row(
                 match.get("title", ""),
-                match.get("published", ""),
+                self._format_date(match.get("published", "")),
                 progress,
             )
+
+    @staticmethod
+    def _format_date(date_str: str) -> str:
+        """Format RFC 2822 date to local time without day name, seconds, or timezone."""
+        try:
+            dt = parsedate_to_datetime(date_str).astimezone()
+            return dt.strftime("%d %b %Y %H:%M")
+        except Exception:
+            return date_str
